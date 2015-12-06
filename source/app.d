@@ -10,6 +10,47 @@ import std.stdio;
 import std.string;
 import std.typecons;
 
+struct Options
+{
+	string[] _inputs;
+	string _output;
+
+	size_t _length;
+	size_t[] _tuples;
+
+	string[] _seeds;
+
+	@property
+	File[] inputs()
+	{
+		return _inputs.length ? _inputs.map!(i => File(i, "r")).array : [ stdin ];
+	}
+
+	@property
+	File output()
+	{
+		return _output.length ? File(_output, "w") : stdout;
+	}
+
+	@property
+	size_t length()
+	{
+		return _length;
+	}
+
+	@property
+	size_t[] tuples()
+	{
+		return _tuples.length ? _tuples : [ 1UL, 2UL, 3UL ];
+	}
+
+	@property
+	string[] seeds()
+	{
+		return _seeds;
+	}
+}
+
 struct MarkovKey
 {
 private:
@@ -342,17 +383,18 @@ void showHelp()
 	writeln;
 }
 
-void polo(File[] inputs, File output, size_t length, size_t[] tuples, string[] seeds)
+void polo(Options options)
 {
-	scope MarkovChain chain = new MarkovChain(tuples);
-	seeds.map!tokens.each!(seed => chain.seed(seed));
-	inputs.map!tokens.each!(input => chain.train(input));
+	File output = options.output;
+	MarkovChain chain = new MarkovChain(options.tuples);
+	options.seeds.map!tokens.each!(seed => chain.seed(seed));
+	options.inputs.map!tokens.each!(input => chain.train(input));
 
-	foreach(i; 0 .. length)
+	foreach(i; 0 .. options.length)
 	{
 		output.write(chain.generate);
 
-		if(i < length - 1)
+		if(i < options.length - 1)
 		{
 			output.write(" ");
 		}
@@ -363,41 +405,32 @@ void polo(File[] inputs, File output, size_t length, size_t[] tuples, string[] s
 
 void main(string[] args)
 {
-	bool help;
-
-	string[] seeds;
-	string outputName;
-	string[] inputNames;
-
-	size_t length = size_t.max;
-	size_t[] tuples;
-
-	getopt(
-		args,
-		config.bundling,
-		"help|h",   &help,
-		"input|i",  &inputNames,
-		"length|l", &length,
-		"output|o", &outputName,
-		"seeds|s",  &seeds,
-		"tuple|t",  &tuples
-	);
-
-	if(tuples.length == 0)
+	try
 	{
-		tuples = [ 1, 2, 3 ];
-	}
+		bool help;
+		Options options;
 
-	if(help)
-	{
-		showHelp;
-	}
-	else
-	{
-		polo(
-			inputNames.getInputFiles,
-			outputName.getOutputFile,
-			length, tuples, seeds
+		args.getopt(
+			config.bundling,
+			"help|h",   &help,
+			"input|i",  &options._inputs,
+			"length|l", &options._length,
+			"output|o", &options._output,
+			"seeds|s",  &options._seeds,
+			"tuple|t",  &options._tuples
 		);
+
+		if(help)
+		{
+			showHelp;
+		}
+		else
+		{
+			polo(options);
+		}
+	}
+	catch(Exception e)
+	{
+		stderr.writeln(e.msg);
 	}
 }
