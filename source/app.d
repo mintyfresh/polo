@@ -17,6 +17,9 @@ struct Options
 	string[] _inputs;
 	string _output;
 
+	double _crossover = 0;
+	double _mutation = 0;
+
 	size_t _length;
 	size_t[] _tuples;
 
@@ -40,6 +43,18 @@ struct Options
 	File output()
 	{
 		return _output.length ? File(_output, "w") : stdout;
+	}
+
+	@property
+	double crossover()
+	{
+		return _crossover;
+	}
+
+	@property
+	double mutation()
+	{
+		return _mutation;
 	}
 
 	@property
@@ -310,7 +325,7 @@ public:
 		return _states.values.all!"a.empty";
 	}
 
-	string generate()
+	string generate(double crossover, double mutation)
 	{
 		string result = null;
 		enforce(!empty, "All markov states are empty.");
@@ -320,7 +335,23 @@ public:
 		{
 			string[] key = _history[$ - state.size .. $];
 			result = state.select(key);
-			if(result) break;
+
+			if(result)
+			{
+				if(crossover > 0)
+				{
+					double chance = uniform(0.0, 1.0);
+					if(chance <= crossover) continue;
+				}
+
+				break;
+			}
+		}
+
+		if(mutation > 0)
+		{
+			double chance = uniform(0.0, 1.0);
+			if(chance <= mutation) result = null;
 		}
 
 		if(result is null)
@@ -428,6 +459,7 @@ void showHelp()
 	writeln(" -h       --help                 Show this message");
 	writeln(" -i       --input=<file>         Adds an input file");
 	writeln(" -l       --length=<#words>      Sets the output length in words");
+	writeln(" -m       --mutation=<#rate>     Sets the mutation rate");
 	writeln(" -o       --output=<file>        Sets the output file");
 	writeln(" -s       --seed=<text>          Adds a seed text");
 	writeln(" -t       --tuple=<#size>        Adds a markov state tuple");
@@ -443,7 +475,7 @@ void polo(Options options)
 
 	foreach(i; 0 .. options.length)
 	{
-		output.write(chain.generate);
+		output.write(chain.generate(options.crossover, options.mutation));
 
 		if(i < options.length - 1)
 		{
@@ -463,13 +495,15 @@ void main(string[] args)
 
 		args.getopt(
 			config.bundling,
-			"help|h",   &help,
-			"filter|f", &options._filter,
-			"input|i",  &options._inputs,
-			"length|l", &options._length,
-			"output|o", &options._output,
-			"seeds|s",  &options._seeds,
-			"tuple|t",  &options._tuples
+			"help|h",      &help,
+			"crossover|c", &options._crossover,
+			"filter|f",    &options._filter,
+			"input|i",     &options._inputs,
+			"length|l",    &options._length,
+			"mutation|m",  &options._mutation,
+			"output|o",    &options._output,
+			"seeds|s",     &options._seeds,
+			"tuple|t",     &options._tuples
 		);
 
 		if(help)
