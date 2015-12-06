@@ -26,7 +26,14 @@ struct Options
 	@property
 	File[] inputs()
 	{
-		return _inputs.length ? _inputs.map!(i => File(i, "r")).array : [ stdin ];
+		if(_inputs.length > 0)
+		{
+			return _inputs.map!(i => File(i, "r")).array;
+		}
+		else
+		{
+			return [ stdin ];
+		}
 	}
 
 	@property
@@ -44,7 +51,14 @@ struct Options
 	@property
 	size_t[] tuples()
 	{
-		return _tuples.length ? _tuples : [ 1UL, 2UL, 3UL ];
+		if(_tuples.length > 0)
+		{
+			return _tuples;
+		}
+		else
+		{
+			return [ 1, 2, 3 ];
+		}
 	}
 
 	@property
