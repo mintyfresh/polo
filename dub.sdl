@@ -1,4 +1,4 @@
 name "polo"
-description "A minimal D application."
+description "Markov chains from the command line."
 copyright "Copyright © 2015, Mihail K"
 authors "Mihail-K"
