@@ -4,8 +4,10 @@ import core.stdc.stdlib;
 import std.algorithm;
 import std.array;
 import std.conv;
+import std.exception;
 import std.getopt;
 import std.random;
+import std.regex;
 import std.stdio;
 import std.string;
 import std.typecons;
@@ -19,6 +21,7 @@ struct Options
 	size_t[] _tuples;
 
 	string[] _seeds;
+	string _filter;
 
 	@property
 	File[] inputs()
@@ -48,6 +51,12 @@ struct Options
 	string[] seeds()
 	{
 		return _seeds;
+	}
+
+	@property
+	string filter()
+	{
+		return _filter;
 	}
 }
 
@@ -187,6 +196,9 @@ private:
 public:
 	this(size_t size)
 	{
+		enforce(size > 0, "State cannot have size 0.");
+		enforce(size <= 100, "State cannot be larger than 100.");
+
 		_size = size;
 	}
 
@@ -196,6 +208,12 @@ public:
 		auto ptr = key in _state;
 
 		return ptr ? ptr.count(follow) : 0;
+	}
+
+	@property
+	bool empty()
+	{
+		return length == 0;
 	}
 
 	@property
@@ -263,6 +281,7 @@ private:
 public:
 	this(size_t[] sizes...)
 	{
+		enforce(sizes.length, "No markov states supplied.");
 		_history.length = sizes.reduce!max;
 
 		foreach(size; sizes)
@@ -271,9 +290,16 @@ public:
 		}
 	}
 
+	@property
+	bool empty()
+	{
+		return _states.values.all!"a.empty";
+	}
+
 	string generate()
 	{
 		string result = null;
+		enforce(!empty, "All markov states are empty.");
 		auto states = _states.values.sort!"a.size > b.size";
 
 		foreach(state; states)
@@ -331,7 +357,7 @@ public:
 	}
 }
 
-string[] tokens(File file)
+string[] tokens(File file, string pattern)
 {
 	return file
 		.byLine
@@ -340,15 +366,25 @@ string[] tokens(File file)
 		.map!splitter
 		.joiner
 		.filter!"a.length > 0"
+		.filter!(token =>
+			pattern.length ?
+			token.matchFirst(pattern).empty :
+			true
+		)
 		.array;
 }
 
-string[] tokens(string input)
+string[] tokens(string input, string pattern)
 {
 	return input
 		.strip
 		.splitter
 		.filter!"a.length > 0"
+		.filter!(token =>
+			pattern.length ?
+			token.matchFirst(pattern).empty :
+			true
+		)
 		.array;
 }
 
@@ -371,9 +407,10 @@ File[] getInputFiles(string[] names)
 
 void showHelp()
 {
-	writeln("Usage: polo [-hilost] -- ");
+	writeln("Usage: polo [-fhilost] -- ");
 	writeln;
 	writeln("Option   Long Option            Meaning");
+	writeln(" -f       --filter=<pattern>     Regex filter applied to tokens");
 	writeln(" -h       --help                 Show this message");
 	writeln(" -i       --input=<file>         Adds an input file");
 	writeln(" -l       --length=<#words>      Sets the output length in words");
@@ -387,8 +424,8 @@ void polo(Options options)
 {
 	File output = options.output;
 	MarkovChain chain = new MarkovChain(options.tuples);
-	options.seeds.map!tokens.each!(seed => chain.seed(seed));
-	options.inputs.map!tokens.each!(input => chain.train(input));
+	options.seeds.map!(s => s.tokens(options.filter)).each!(seed => chain.seed(seed));
+	options.inputs.map!(s => s.tokens(options.filter)).each!(input => chain.train(input));
 
 	foreach(i; 0 .. options.length)
 	{
@@ -413,6 +450,7 @@ void main(string[] args)
 		args.getopt(
 			config.bundling,
 			"help|h",   &help,
+			"filter|f", &options._filter,
 			"input|i",  &options._inputs,
 			"length|l", &options._length,
 			"output|o", &options._output,
@@ -431,6 +469,7 @@ void main(string[] args)
 	}
 	catch(Exception e)
 	{
+		stderr.write("Error: ");
 		stderr.writeln(e.msg);
 	}
 }
