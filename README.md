@@ -53,6 +53,22 @@ Polo isn't just limited to writing your literary assignment for you, you know. I
 
 And other things you'd rather not be doing yourself, and all of them from your command line.
 
+### Wait, polo generates unit tests?
+
+Sure! Just feed a couple of source files of whatever your testing, and a bunch of unit tests as well so it gets the general gist of how those are written. For example, given the source (and unit tests) from the markov library, and the source of polo itself, we managed to get a perfectly good chunk of code that looks like this:
+
+```d
+unittest { try { bool help; Options options; args.getopt( config.bundling, "help|h", &help, "filter|f", &options._filter, "input|i", &options._inputs, "length|l", &options._length, "output|o", &options._output, "seeds|s", &options._seeds, "tuple|t", &options._tuples ); if(help) { showHelp; } else { return [ stdin ]; } } @property Nullable!(Unqual!T) random()() if(!isAssignable!(T, typeof(null))) { Nullable!(Unqual!T) result; if(!empty) { foreach(ref state; _states) { if(size <= index) { T[] first = input[index - size .. index]; state.poke(first, follow); } } T generate()() if(isAssignable!(T, typeof(null))) { foreach(ref state; _states) { T current = state.select(_history[$ - state.size .. $]); if(current) return push(current), current; } return null; } } @property T value() { return _key[0]; } bool opEquals(ref const Key other) const { return _key == other._key; } } public: this(size_t size) { _size = enforce(size, "State size cannot be 0."); } bool contains(T[] first) { if(first.length == size) { auto ptr = Key(first) in _counters; return ptr ? ptr.contains(follow) : false; }
+```
+
+I personally can't make heads or tails of it, not have I tried to run it through a compiler, but it looks fairly legit. Even starts with a `unittest` keyword. Regardless, it only took as long as typing out a single line in bash.
+
+```bash
+cat ../markov/source/markov/*.d source/app.d | polo -l 150
+```
+
+Now that's time efficiency.
+
 ## Building
 
 Just clone the repo locally and build. Building polo is easy with dub, and without.
