@@ -1,11 +1,13 @@
 # polo - Markov Polo
 For when you really need markov chains on your command line.
 
+Polo now uses the [D markov library](https://www.github.com/Mihail-K/markov), and hence fits into a quarter of the lines of code, compared to what it was before.
+
 ## Why use it?
 Ever been faced with the problem of having to write a needlessly long document, when all you have is your command line? 
 Faced with a sudden need to write a resume, but all you have is a terminal? Got an English paper due tomorrow, but all you have ready is your shell?
 
-As tempting as it might sound, writing 3000 words in nano or emacs is really not as fun as it might sound, (take it from experience), but there is a better way! Just grab the plain texts for your source material (and some stuff from your own reading library, in our case, a collection of [FIMFiction clopfics](https://www.fimfiction.net/group/12/clopfics)) and fire away.
+As tempting as it might sound, writing 3000 words in nano or emacs is really not as fun as you think it might be, (take it from experience), but there is a better way! Just grab the plain texts for your source material (and some stuff from your own reading library, in our case, a collection of [FIMFiction clopfics](https://www.fimfiction.net/group/12/clopfics)) and fire away.
 
 ```bash
 cat "lord of the rings fellowship.txt" "my clopfics.txt" | polo -l 3000 > assignment1.txt
