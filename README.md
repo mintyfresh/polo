@@ -69,6 +69,14 @@ cat ../markov/source/markov/*.d source/app.d | polo -l 150
 
 Now that's time efficiency.
 
+### Wikipedia articles? I'm skeptical.
+
+Easily! For example, let us take two articles relevant to one another, and run them through polo so as to produce something that would give us a better understanding of both source materials. In this case, I've opted to use articles on Stalin and Dishonored. Two subjects oft paired together.
+
+> Stalin was drafted into the Russian Army but couldn't serve as a result of player-conducted testing of the game, the designers decided that a more direct navigation system was required.
+
+Factual accuracy at its finest.
+
 ## Building
 
 Just clone the repo locally and build. Building polo is easy with dub, and without.
