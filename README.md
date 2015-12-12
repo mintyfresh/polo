@@ -30,7 +30,7 @@ All you really need for this one is a copy of the King James bible, the plain te
 cat "king james.txt" "lord of the rings fellowship.txt" "harry.txt" | polo -l 6500 > philo1.txt
 ```
 
-And you're done! Again! All that's left to do is print the paper and give it a quick once over, go as to glimpse that which you have wrought.
+And you're done! Again! All that's left to do is print the paper and give it a quick once over, so as to glimpse that which you have wrought.
 
 > 14:2 Holy shit, pipe weed.
 
