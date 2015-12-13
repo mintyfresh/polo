@@ -88,9 +88,9 @@ dub build --build=release
 
 Without DUB
 ```bash
-git clone http://github.com/Mihail-K/markov.git &&
-dmd source/app.d markov/source/markov/*.d -release -ofpolo &&
-rm -f polo.o &&
+git clone http://github.com/Mihail-K/markov.git && \
+dmd source/app.d markov/source/markov/*.d -release -ofpolo && \
+rm -f polo.o && \
 yes | rm -r markov
 ```
 
