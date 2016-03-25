@@ -77,6 +77,20 @@ Easily! For example, let us take two articles relevant to one another, and run t
 
 Factual accuracy at its finest.
 
+### Dictionaries
+
+Polo now supports dictionaries, which allows you to feed in your training inputs once, and then generate outputs without having to re-train each time. Dictionaries are implemented using the markov library's serialization facilities, and can be stored as either binary representation or JSON (default is binary). To train a polo dictionary, you just need to do,
+
+```bash
+cat input1.txt input2.txt ... | polo -m train > my_dictionary.dict
+```
+
+And then to use your dictionary, all you'd need to do is,
+
+```bash
+polo -d my_dictionary.dict -l 150
+```
+
 ## Building
 
 Just clone the repo locally and build. Building polo is easy with dub, and without.
