@@ -11,6 +11,10 @@ import markov;
 
 struct Options
 {
+    string _mode = "generate";
+    string _format = "bin";
+
+    string _dictionary;
     string[] _inputs;
     string _output;
 
@@ -19,6 +23,51 @@ struct Options
 
     string[] _seeds;
     string _filter;
+
+    @property
+    File dictionary()
+    {
+        return File(_dictionary, "rb");
+    }
+
+    @property
+    string format()
+    {
+        switch(_format.toLower)
+        {
+            case "bin":
+            case "json":
+                return _format.toLower;
+            case "b":
+            case "binary":
+                return "bin";
+            case "j":
+                return "json";
+            default:
+                stderr.writeln("Unsupported format: ", _format);
+                stderr.writeln("  Defaulting to binary.");
+                return _format = "bin";
+        }
+    }
+
+    @property
+    string mode()
+    {
+        switch(_mode.toLower)
+        {
+            case "train":
+            case "generate":
+                return _mode.toLower;
+            case "t":
+                return "train";
+            case "g":
+                return "generate";
+            default:
+                stderr.writeln("Unsupported format: ", _mode);
+                stderr.writeln("  Defaulting to generate.");
+                return _mode = "generate";
+        }
+    }
 
     @property
     File[] inputs()
@@ -36,7 +85,9 @@ struct Options
     @property
     File output()
     {
-        return _output.length ? File(_output, "w") : stdout;
+        File output = _output.length ? File(_output, "w") : stdout;
+
+        return output;
     }
 
     @property
@@ -73,6 +124,8 @@ struct Options
 
 string[] tokens(File file, string pattern)
 {
+    scope(exit) file.close;
+
     return file
         .byLine
         .map!text
@@ -102,44 +155,81 @@ string[] tokens(string input, string pattern)
         .array;
 }
 
-File getOutputFile(string name)
+void showHelp()
 {
-    return name.length ? File(name, "w") : stdout;
+    writeln("Usage: polo [-dFfhilmost] -- ");
+    writeln;
+    writeln("Option   Long Option              Meaning");
+    writeln(" -d       --dictionary=<file>      Sets the input dictionary file");
+    writeln(" -F       --format=<bin|json>      Specifies the dictionary format");
+    writeln("                                   (default: bin)");
+    writeln(" -f       --filter=<pattern>       Regex filter applied to tokens");
+    writeln(" -h       --help                   Show this message");
+    writeln(" -i       --input=<file>           Adds an input file");
+    writeln(" -l       --length=<#words>        Sets the output length in words");
+    writeln(" -m       --mode=<train|generate>  Sets the operating mode");
+    writeln("                                   (default: generate)");
+    writeln(" -o       --output=<file>          Sets the output file");
+    writeln(" -s       --seed=<text>            Adds a seed text");
+    writeln(" -t       --tuple=<#size>          Adds a markov state tuple");
+    writeln;
 }
 
-File[] getInputFiles(string[] names)
+MarkovChain!string decodeChain(Options *options)
 {
-    if(names.length > 0)
+    File dictionary = options.dictionary;
+    scope(exit) dictionary.close;
+
+    if(options.format == "bin")
     {
-        return names.map!(n => File(n, "r")).array;
+        return decodeBinary!string(dictionary);
     }
     else
     {
-        return [ stdin ];
+        return decodeJSON!string(dictionary);
     }
 }
 
-void showHelp()
-{
-    writeln("Usage: polo [-fhilost] -- ");
-    writeln;
-    writeln("Option   Long Option            Meaning");
-    writeln(" -f       --filter=<pattern>     Regex filter applied to tokens");
-    writeln(" -h       --help                 Show this message");
-    writeln(" -i       --input=<file>         Adds an input file");
-    writeln(" -l       --length=<#words>      Sets the output length in words");
-    writeln(" -o       --output=<file>        Sets the output file");
-    writeln(" -s       --seed=<text>          Adds a seed text");
-    writeln(" -t       --tuple=<#size>        Adds a markov state tuple");
-    writeln;
-}
-
-void polo(Options options)
+void encodeChain(MarkovChain!string *chain, Options *options)
 {
     File output = options.output;
-    auto chain = new MarkovChain!string(options.tuples);
+
+    if(options.format == "bin")
+    {
+        encodeBinary(*chain, output);
+    }
+    else
+    {
+        encodeJSON(*chain, output);
+    }
+}
+
+MarkovChain!string createChain(Options *options)
+{
+    if(options._dictionary.length)
+    {
+        return decodeChain(options);
+    }
+    else
+    {
+        return MarkovChain!string(options.tuples);
+    }
+}
+
+void seed(MarkovChain!string *chain, Options *options)
+{
     options.seeds.map!(s => s.tokens(options.filter)).each!(seed => chain.seed(seed));
+}
+
+void train(MarkovChain!string *chain, Options *options)
+{
     options.inputs.map!(s => s.tokens(options.filter)).each!(input => chain.train(input));
+}
+
+void generate(MarkovChain!string *chain, Options *options)
+{
+    File output = options.output;
+    scope(exit) output.close;
 
     foreach(i; 0 .. options.length)
     {
@@ -154,6 +244,31 @@ void polo(Options options)
     output.writeln;
 }
 
+void polo(Options *options)
+{
+    MarkovChain!string chain = options.createChain;
+
+    if(options.mode == "generate")
+    {
+        if(options._dictionary.length == 0)
+        {
+            train(&chain, options);
+        }
+
+        seed(&chain, options);
+        generate(&chain, options);
+    }
+    else if(options.mode == "train")
+    {
+        train(&chain, options);
+        encodeChain(&chain, options);
+    }
+    else
+    {
+        assert(0);
+    }
+}
+
 void main(string[] args)
 {
     try
@@ -163,13 +278,16 @@ void main(string[] args)
 
         args.getopt(
             config.bundling,
-            "help|h",      &help,
-            "filter|f",    &options._filter,
-            "input|i",     &options._inputs,
-            "length|l",    &options._length,
-            "output|o",    &options._output,
-            "seeds|s",     &options._seeds,
-            "tuple|t",     &options._tuples
+            "dictionary|d", &options._dictionary,
+            "format|F",     &options._format,
+            "help|h",       &help,
+            "filter|f",     &options._filter,
+            "input|i",      &options._inputs,
+            "length|l",     &options._length,
+            "mode|m",       &options._mode,
+            "output|o",     &options._output,
+            "seeds|s",      &options._seeds,
+            "tuple|t",      &options._tuples
         );
 
         if(help)
@@ -178,7 +296,7 @@ void main(string[] args)
         }
         else
         {
-            polo(options);
+            polo(&options);
         }
     }
     catch(Exception e)
